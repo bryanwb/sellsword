@@ -1,0 +1,16 @@
+# This is a simple wrapper script that sources environment variables returned by
+# the sellsword command
+
+stdout=$(sellsword $@)
+exitcode=$?
+
+if [ $exitcode -ne 0 ] ; then
+   exit $exitcode
+fi
+
+if [ ! -z "$stdout" ] ; then
+   tmpfile=$(mktemp -q /tmp/ssw.XXXXXXXX)
+   echo "$stdout" > $tmpfile
+   source $tmpfile
+   rm -f $tmpfile
+fi
