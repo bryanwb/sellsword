@@ -8,7 +8,15 @@ if [ $exitcode -ne 0 ] ; then
    exit $exitcode
 fi
 
-if [ "$1" = "load" ] || [ "$1" = "use" ] ; then
+is_help_command=0
+
+for i in $@; do
+    if [ "$i" = "help" ] || [ "$i" = "--help" ] ; then
+        is_help_command=1
+    fi
+done
+
+if [ "$1" = "load" ] || [ "$1" = "use" ] && [ $is_help_command -ne 1 ]; then
     eval_stdout=1
 else
     eval_stdout=0
