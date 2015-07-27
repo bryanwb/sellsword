@@ -23,10 +23,6 @@ else
 fi
 
 if [ ! -z "$stdout" ] && [ $eval_stdout -eq 1 ] ; then
-    # tmpfile=$(mktemp -q /tmp/ssw.XXXXXXXX)
-    # echo "$stdout" > $tmpfile
-    # source $tmpfile
-    # rm -f $tmpfile
     eval "$stdout"
 else
     echo "$stdout"
