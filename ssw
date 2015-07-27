@@ -8,9 +8,18 @@ if [ $exitcode -ne 0 ] ; then
    exit $exitcode
 fi
 
-if [ ! -z "$stdout" ] ; then
-   tmpfile=$(mktemp -q /tmp/ssw.XXXXXXXX)
-   echo "$stdout" > $tmpfile
-   source $tmpfile
-   rm -f $tmpfile
+if [ "$1" = "load" ] || [ "$1" = "use" ] ; then
+    eval_stdout=1
+else
+    eval_stdout=0
+fi
+
+if [ ! -z "$stdout" ] && [ $eval_stdout -eq 1 ] ; then
+    # tmpfile=$(mktemp -q /tmp/ssw.XXXXXXXX)
+    # echo "$stdout" > $tmpfile
+    # source $tmpfile
+    # rm -f $tmpfile
+    eval "$stdout"
+else
+    echo "$stdout"
 fi

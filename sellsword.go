@@ -35,8 +35,36 @@ func (c *sswConfig) ParseExportVars() (map[string]string, error) {
 	return exportVars, nil
 }
 
+func mergeEnvMap(dest map[string]string, src map[string]string) {
+	for key, value := range src {
+		if _, ok := dest[key]; ok {
+			logger.Printf("There is already a value present for %s, ignoring new value", key)
+		} else {
+			dest[key] = value
+		}
+	}
+}
+
+func populateExportVars(exportVars map[string]string, currentVars map[string]string) {
+	for key, value := range exportVars {
+		if currentValue, ok := currentVars[value]; ok {
+			exportVars[key] = currentValue
+		} else {
+			delete(exportVars, key)
+		}
+	}
+}
+
+func convertToBash(exportVars map[string]string) {
+	exports := make([]string, 1)
+	for key, value := range exportVars {
+		exports = append(exports, "export "+key+"="+value)
+	}
+	fmt.Println(strings.Join(exports, "\n"))
+}
+
 func loadConfigs() {
-	//	allExportedVars := make(map[string]string)
+	allExportedVars := make(map[string]string)
 	usr, _ := user.Current()
 	homedir := path.Join(usr.HomeDir, "/.ssw/config")
 	logger.Println(homedir)
@@ -64,21 +92,22 @@ func loadConfigs() {
 		}
 		if config.ConfigType == "environment" {
 			exportVars, err := config.ParseExportVars()
-			logger.Printf("%v\n", exportVars)
 			if err == nil {
 				envFile := path.Join(usr.HomeDir, "/.ssw", config.Name, "current-env.ssw")
 				logger.Printf("Loading current environment %s", envFile)
-				currentVars := make(map[string]interface{})
+				currentVars := make(map[string]string)
 				envData, err := ioutil.ReadFile(envFile)
 				if err == nil {
 					yaml.Unmarshal(envData, currentVars)
+					populateExportVars(exportVars, currentVars)
+					mergeEnvMap(allExportedVars, exportVars)
 				} else {
 					logger.Fatal(err)
 				}
 			}
 		}
 	}
-
+	convertToBash(allExportedVars)
 }
 
 func mkdirP(directories []string) {

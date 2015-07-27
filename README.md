@@ -54,7 +54,9 @@ Example configuration for AWS
         current-env.ssw  # symlink to current configuration
         
 Any file ending in '-env.ssw' will be sourced to the parent shell and should only include key/value pairs.
-Note that this actually a yaml file
+Note that this actually a yaml file. Also note that we are using lower-case values here and not the typical
+uppercase used by environment variables. This is because most self-respecting developers swap caps lock
+with control, making long uppercase names inconvenient to type.
 
 ```
 # file ~/.ssw/aws/acme-dev-env.ssw
