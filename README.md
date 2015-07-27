@@ -17,6 +17,7 @@ the parent shell.
 
 Sellsword is only supported for the BASH shell and on the OS X and linux operating systems. Sellsword is implemented primarily in Go because writing complex logic in BASH shortens one's life expectancy.
 
+
 ## Installation
 
 #. Download the tarball
@@ -28,13 +29,15 @@ source $(which ssw)      # this loads environment variables for current configur
 alias ssw='source $(which ssw)'   
 ```
 
+
+
 ## Configuration
 
 Sellsword knows about a few applications by default but these can be overriden
 
 .ssw/
      app_name/
-             app_name.ssw  # this is just a yaml file, .ssw extension is used to avoid conflicts
+             app_name-env.ssw  # this is just a yaml file, .ssw extension is used to avoid conflicts
                            # with the application's own configuration files
 
 
@@ -48,9 +51,35 @@ Example configuration for AWS
         megacorp-dev-env.ssw
         megacorp-qa-env.ssw
         megacorp-prod-env.ssw
-        current_env.ssw  # symlink to current configuration
+        current-env.ssw  # symlink to current configuration
+        
+Any file ending in '-env.ssw' will be sourced to the parent shell and should only include key/value pairs.
+Note that this actually a yaml file
 
-Any file ending in '-env.ssw' will be sourced to the parent shell and should only include bash code.
+```
+# file ~/.ssw/aws/acme-dev-env.ssw
+access_key: ASDFAFASDFSDAF...
+secret_key: asdfasdfadsf...
+```
+
+There should be a corresponding configuration file that maps the keys to environment variables. Notice
+that you can map a single key to multiple environment variables.
+
+```
+# file ~/.ssw/config/aws.ssw yaml
+type: environment
+
+variables:
+  - access_key=AWS_ACCESS_KEY_ID
+  - access_key=AWS_ACCESS_ID
+  - region=AWS_DEFAULT_REGION
+  - region=AWS_REGION
+```
+
+It is important to note that the variables section is a list of key/value pairs where the same keys
+can be present multiple times. This is so that the same key can be mapped to multiple values. The
+reason for this is that different applications often use different names for the same environment
+variables.
 
 Example Configuration for Chef Server
 
@@ -62,6 +91,7 @@ Example Configuration for Chef Server
                 default-validator.pem
         acme-qa/
         acme-prod/
+     config/
         chef.ssw
 
 ```
