@@ -19,6 +19,7 @@ type sswEnv struct {
 	Name      string
 	EnvType   string `yaml:"type"`
 	Path      string
+	Dir       string
 	Variables []string
 }
 
@@ -35,10 +36,24 @@ func (c *sswEnv) ParseExportVars() (map[string]string, error) {
 	return exportVars, nil
 }
 
+func getSswKeys(envs map[string]*sswEnv) []string {
+	keys := make([]string, 0, len(envs))
+	for k := range envs {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 func getTermPrinter(colorName color.Attribute) func(...interface{}) string {
 	newColor := color.New(colorName)
 	newColor.EnableColor()
 	return newColor.SprintFunc()
+}
+
+func getTermPrinterF(colorName color.Attribute) func(string, ...interface{}) string {
+	newColor := color.New(colorName)
+	newColor.EnableColor()
+	return newColor.SprintfFunc()
 }
 
 func mergeEnvMap(dest map[string]string, src map[string]string) {
@@ -72,6 +87,56 @@ func convertToBash(exportVars map[string]string) {
 func parseEnvName(pathName string) string {
 	envName := strings.Split(path.Base(pathName), ".ssw")[0]
 	return strings.Split(envName, "-env")[0]
+}
+
+func useEnv(appName string, envName string) {
+	envs, _ := findCurrentEnvs()
+	if env, ok := envs[appName]; ok {
+		if parseEnvName(env.Path) == envName {
+			red := getTermPrinterF(color.FgRed)
+			fmt.Fprintln(os.Stderr, red("The environment %s is already in use for application %s",
+				envName, appName))
+			fmt.Fprint(os.Stderr, "Execute `ssw list` to see available applications and configurations")
+		} else {
+			if env.EnvType == "environment" {
+				symlink := path.Join(env.Dir, "current-env.ssw")
+				if _, err := os.Stat(symlink); os.IsNotExist(err) {
+					log.Debugf("No environment currently linked at %s\n", symlink)
+				} else {
+					_, err := os.Readlink(symlink)
+					if err != nil {
+						log.Debugf("The current symlink %s is invalid, delete it anyways.", symlink)
+					}
+				}
+				newEnvPath := path.Join(env.Dir, envName+"-env.ssw")
+				if _, err := os.Stat(newEnvPath); os.IsNotExist(err) {
+					red := getTermPrinterF(color.FgRed)
+					fmt.Fprintln(os.Stderr, red("No environment named %s exists for %s", envName, appName))
+					fmt.Fprintf(os.Stderr, "You can create a new environment by executing `ssw new %s %s`",
+						appName, envName)
+				} else {
+					log.Debugf("Deleting current symlink for %s at %s", appName, symlink)
+					_ = os.Remove(symlink)
+					err := os.Symlink(newEnvPath, symlink)
+					if err != nil {
+						log.Errorf("Encountered error %s when trying to symlink %s to %s", err.Error(),
+							newEnvPath, symlink)
+					} else {
+						env.Path = newEnvPath
+						loadEnv(env)
+					}
+				}
+			} else {
+				log.Error("directory environments not currently supported")
+			}
+		}
+	} else {
+		red := getTermPrinterF(color.FgRed)
+		fmt.Fprintf(os.Stderr, red("No configuration exists for %s\n", appName))
+		apps := getSswKeys(envs)
+		fmt.Fprintf(os.Stderr, "Configurations do exist for %s. Did you mean to use one of them?\n",
+			strings.Join(apps, ", "))
+	}
 }
 
 func listEnv(env *sswEnv) {
@@ -111,10 +176,7 @@ func listEnvs(envList []string) {
 			if env, ok := envs[envList[i]]; ok {
 				listEnv(env)
 			} else {
-				apps := make([]string, 0, len(envs))
-				for k := range envs {
-					apps = append(apps, k)
-				}
+				apps := getSswKeys(envs)
 				log.Errorf("There is no configuration for %s, configurations are available for %s",
 					envList[i], strings.Join(apps, ", "))
 			}
@@ -157,15 +219,16 @@ func readCurrentEnv(currentPath string, env *sswEnv) {
 }
 
 func findCurrentEnvs() (map[string]*sswEnv, error) {
-	envs, nil := findEnvs()
+	envs, _ := findEnvs()
 	usr, _ := user.Current()
 	homedir := path.Join(usr.HomeDir, "/.ssw/")
 	for k, _ := range envs {
+		envs[k].Dir = path.Join(homedir, envs[k].Name)
 		if envs[k].EnvType == "environment" {
-			currentEnvPath := path.Join(homedir, envs[k].Name, "current-env.ssw")
+			currentEnvPath := path.Join(envs[k].Dir, "current-env.ssw")
 			readCurrentEnv(currentEnvPath, envs[k])
 		} else if envs[k].EnvType == "directory" {
-			currentEnvPath := path.Join(homedir, envs[k].Name, "current")
+			currentEnvPath := path.Join(envs[k].Dir, "current")
 			readCurrentEnv(currentEnvPath, envs[k])
 		}
 	}
@@ -202,6 +265,27 @@ func findEnvs() (map[string]*sswEnv, error) {
 		envs[env.Name] = env
 	}
 	return envs, nil
+}
+
+// This fucnition duplicates a fair amount of code in loadEnvs, and needs to be DRY'd up
+func loadEnv(env *sswEnv) error {
+	exportVars, err := env.ParseExportVars()
+	if err == nil {
+		log.Debugf("Loading current environment %s", env.Path)
+		currentVars := make(map[string]string)
+		envData, err := ioutil.ReadFile(env.Path)
+		if err == nil {
+			yaml.Unmarshal(envData, currentVars)
+			populateExportVars(exportVars, currentVars)
+		} else {
+			log.Error(err)
+			return err
+		}
+	} else {
+		return err
+	}
+	convertToBash(exportVars)
+	return nil
 }
 
 func loadEnvs() {
@@ -328,6 +412,25 @@ func main() {
 		},
 	}
 	sswCmd.AddCommand(listCmd)
+
+	var useCmd = &cobra.Command{
+		Use:   "use app env",
+		Short: "Load environment and set it as default for application",
+		Long:  `Load environment and set it as default for application`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) > 2 {
+				red := getTermPrinter(color.FgRed)
+				fmt.Fprintf(os.Stderr, "%s\n", red("Usage: ssw use app_name environment"))
+				fmt.Fprintf(os.Stderr, "%s\n",
+					red("Execute `ssw list` to show available applications and environments"))
+			} else {
+				app := args[0]
+				env := args[1]
+				useEnv(app, env)
+			}
+		},
+	}
+	sswCmd.AddCommand(useCmd)
 
 	sswCmd.Execute()
 

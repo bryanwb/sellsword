@@ -11,11 +11,11 @@ currently supports two mechanisms for switching between applications:
 #. changing symlinks to either directories or individual files
 
 There are two components to sellsword, `ssw` and `sellsword`. The `sellsword` binary does all the
-work but cannot source any environment variables into the parent shell. `source /path/to/ssw [ARG1] [ARG2]`
+work but cannot source any environment variables into the parent shell. `source /path/to/ssw [ARG ...]`
 executes sellsword with t the supplied arguments and loads any changed environment variables into
-the parent shell.
+the parent shell. This is a huge *hack* but it is the only way I know how to load environment variables into the parent shell.
 
-Sellsword is only supported for the BASH shell and on the OS X and linux operating systems. Sellsword is implemented primarily in Go because writing complex logic in BASH shortens one's life expectancy.
+Sellsword is only supported for the BASH shell and on the OS X and linux operating systems. Sellsword is implemented primarily in Go because writing complex logic in BASH dramatically shortens one's life expectancy.
 
 
 ## Installation
