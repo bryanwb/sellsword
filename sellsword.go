@@ -15,12 +15,6 @@ import (
 
 var log = logrus.New()
 
-func setDebug(verbose bool) {
-	if verbose == true {
-		log.Level = logrus.DebugLevel
-	}
-}
-
 type sswEnv struct {
 	Name      string
 	EnvType   string `yaml:"type"`
@@ -39,6 +33,12 @@ func (c *sswEnv) ParseExportVars() (map[string]string, error) {
 		exportVars[keyValue[1]] = keyValue[0]
 	}
 	return exportVars, nil
+}
+
+func getTermPrinter(colorName color.Attribute) func(...interface{}) string {
+	newColor := color.New(colorName)
+	newColor.EnableColor()
+	return newColor.SprintFunc()
 }
 
 func mergeEnvMap(dest map[string]string, src map[string]string) {
@@ -69,15 +69,90 @@ func convertToBash(exportVars map[string]string) {
 	fmt.Println(strings.Join(exports, "\n"))
 }
 
+func parseEnvName(pathName string) string {
+	envName := strings.Split(path.Base(pathName), ".ssw")[0]
+	return strings.Split(envName, "-env")[0]
+}
+
+func listEnv(env *sswEnv) {
+	cyan := getTermPrinter(color.FgCyan)
+	fmt.Printf("%s:\n", cyan(env.Name))
+	currentEnv := ""
+	if env.Path == "" {
+		red := getTermPrinter(color.FgRed)
+		fmt.Printf("%s\n", red("No environment currently in use"))
+	} else {
+		currentEnv = parseEnvName(env.Path)
+		log.Debugf("currentEnv is %s", currentEnv)
+
+		green := getTermPrinter(color.FgGreen)
+		fmt.Printf("\t%s\t%s\n", green(currentEnv), green("CURRENT"))
+	}
+	usr, _ := user.Current()
+	appdir := path.Join(usr.HomeDir, "/.ssw/", env.Name)
+	dirInfo, _ := ioutil.ReadDir(appdir)
+	var envName string
+	for i := range dirInfo {
+		envName = parseEnvName(dirInfo[i].Name())
+		if envName != "current" && envName != currentEnv {
+			fmt.Printf("\t%s\n", envName)
+		}
+	}
+}
+
+func listEnvs(envList []string) {
+	envs, _ := findCurrentEnvs()
+	if len(envList) == 0 {
+		for k, _ := range envs {
+			listEnv(envs[k])
+		}
+	} else {
+		for i := range envList {
+			if env, ok := envs[envList[i]]; ok {
+				listEnv(env)
+			} else {
+				apps := make([]string, 0, len(envs))
+				for k := range envs {
+					apps = append(apps, k)
+				}
+				log.Errorf("There is no configuration for %s, configurations are available for %s",
+					envList[i], strings.Join(apps, ", "))
+			}
+		}
+	}
+}
+
 func showCurrentEnvs() {
 	envs, _ := findCurrentEnvs()
 	fmt.Println("Environments in use:")
 	for k, _ := range envs {
-		currentEnv := strings.Split(path.Base(envs[k].Path), ".ssw")[0]
-		currentEnv = strings.Split(currentEnv, "-env")[0]
-		green := color.New(color.FgGreen).SprintFunc()
-		blue := color.New(color.FgCyan).SprintFunc()
-		fmt.Printf("%s\t%s\n", green(envs[k].Name), blue(currentEnv))
+		if envs[k].Path != "" {
+			currentEnv := strings.Split(path.Base(envs[k].Path), ".ssw")[0]
+			currentEnv = strings.Split(currentEnv, "-env")[0]
+			green := getTermPrinter(color.FgGreen)
+			blue := getTermPrinter(color.FgCyan)
+			fmt.Printf("%s\t%s\n", green(envs[k].Name), blue(currentEnv))
+		}
+	}
+}
+
+func readCurrentEnv(currentPath string, env *sswEnv) {
+	fi, err := os.Lstat(currentPath)
+	if err != nil {
+		log.Errorf("Path %s does not exist\n", currentPath)
+	} else {
+		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+			realPath, err := os.Readlink(currentPath)
+			log.Debugf("Resolved current env for %s to %s\n", env.Name, realPath)
+			if err == nil {
+				env.Path = realPath
+			} else {
+				env.Path = ""
+			}
+		} else {
+			env.Path = ""
+			log.Errorf("Path %s is not a symlink and should be", currentPath)
+		}
 	}
 }
 
@@ -88,19 +163,10 @@ func findCurrentEnvs() (map[string]*sswEnv, error) {
 	for k, _ := range envs {
 		if envs[k].EnvType == "environment" {
 			currentEnvPath := path.Join(homedir, envs[k].Name, "current-env.ssw")
-			fi, err := os.Lstat(currentEnvPath)
-			if err != nil {
-				log.Errorf("Path %s does not exist\n", currentEnvPath)
-			} else {
-				if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
-					realPath, err := os.Readlink(currentEnvPath)
-					if err == nil {
-						envs[k].Path = realPath
-					}
-				} else {
-					log.Errorf("Path %s is not a symlink and should be", currentEnvPath)
-				}
-			}
+			readCurrentEnv(currentEnvPath, envs[k])
+		} else if envs[k].EnvType == "directory" {
+			currentEnvPath := path.Join(homedir, envs[k].Name, "current")
+			readCurrentEnv(currentEnvPath, envs[k])
 		}
 	}
 	return envs, nil
@@ -140,38 +206,14 @@ func findEnvs() (map[string]*sswEnv, error) {
 
 func loadEnvs() {
 	allExportedVars := make(map[string]string)
-	usr, _ := user.Current()
-	homedir := path.Join(usr.HomeDir, "/.ssw/config")
-	log.Println(homedir)
-	dirInfo, err := ioutil.ReadDir(homedir)
-	envs := make([]string, 0)
-	if err == nil {
-		for i := range dirInfo {
-			if strings.HasSuffix(dirInfo[i].Name(), ".ssw") {
-				log.Println("Found configuration file " + dirInfo[i].Name())
-				envs = append(envs, path.Join(homedir, dirInfo[i].Name()))
-			}
-		}
-	} else {
-		log.Error("Failed to read directory " + homedir + ". Received error " + err.Error())
-	}
-	for i := range envs {
-		data, err := ioutil.ReadFile(envs[i])
-		if err != nil {
-			log.Error(err)
-		}
-		env := new(sswEnv)
-		env.Name = strings.TrimSuffix(path.Base(envs[i]), ".ssw")
-		if err := env.Parse(data); err != nil {
-			log.Error(err)
-		}
-		if env.EnvType == "environment" {
-			exportVars, err := env.ParseExportVars()
+	envs, _ := findCurrentEnvs()
+	for k, _ := range envs {
+		if envs[k].EnvType == "environment" {
+			exportVars, err := envs[k].ParseExportVars()
 			if err == nil {
-				envFile := path.Join(usr.HomeDir, "/.ssw", env.Name, "current-env.ssw")
-				log.Debugf("Loading current environment %s", envFile)
+				log.Debugf("Loading current environment %s", envs[k].Path)
 				currentVars := make(map[string]string)
-				envData, err := ioutil.ReadFile(envFile)
+				envData, err := ioutil.ReadFile(envs[k].Path)
 				if err == nil {
 					yaml.Unmarshal(envData, currentVars)
 					populateExportVars(exportVars, currentVars)
@@ -225,12 +267,19 @@ func main() {
 	}
 	sswCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
 
+	sswCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+		// for some reason I have to look up the verbose flag rather than just access the Verbose var
+		v := sswCmd.Flags().Lookup("verbose").Value.String()
+		if v == "true" {
+			log.Level = logrus.DebugLevel
+		}
+	}
+
 	var versionCmd = &cobra.Command{
 		Use:   "version",
 		Short: "Print the version number of sellsword",
 		Long:  `All software has versions. This is Sellsword's`,
 		Run: func(cmd *cobra.Command, args []string) {
-			setDebug(Verbose)
 			fmt.Println("Sellsword version 0.0.1")
 		},
 	}
@@ -241,7 +290,6 @@ func main() {
 		Short: "Initialize Sellsword",
 		Long:  `This command creates the Sellsword directory structure and downloads default configurations from git@github.com:bryanwb/sellsword.git`,
 		Run: func(cmd *cobra.Command, args []string) {
-			setDebug(Verbose)
 			usr, _ := user.Current()
 			homedir := path.Join(usr.HomeDir, ".ssw/config")
 			awsdir := path.Join(usr.HomeDir, ".ssw/aws")
@@ -256,7 +304,6 @@ func main() {
 		Short: "Loads current Sellsword configurations",
 		Long:  `This command loads all default environment configurations for use by the shell`,
 		Run: func(cmd *cobra.Command, args []string) {
-			setDebug(Verbose)
 			loadEnvs()
 		},
 	}
@@ -267,11 +314,20 @@ func main() {
 		Short: "Show Sellsword environments",
 		Long:  `Show current Sellsword environments`,
 		Run: func(cmd *cobra.Command, args []string) {
-			setDebug(Verbose)
 			showCurrentEnvs()
 		},
 	}
 	sswCmd.AddCommand(showCmd)
+
+	var listCmd = &cobra.Command{
+		Use:   "list [env ...]",
+		Short: "list available Sellsword environments",
+		Long:  `List available Sellsword environments`,
+		Run: func(cmd *cobra.Command, args []string) {
+			listEnvs(args)
+		},
+	}
+	sswCmd.AddCommand(listCmd)
 
 	sswCmd.Execute()
 
