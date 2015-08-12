@@ -1,10 +1,10 @@
 # sellsword
 
-Sellsword is a generic command-line tool for switching between application configurations
+Sellsword is a generic command-line tool for switching between application environments
 
-Technology consultants, such as this project's original author, have to manage different configurations
+Technology consultants, such as this project's original author, have to manage different environments
 for a given application for each customer. Doing this separately for each application just sucks. Sellsword
-is a generic command-line tool for switching between arbitrary application configurations. Sellsword
+is a generic command-line tool for switching between arbitrary application environments. Sellsword
 currently supports two mechanisms for switching between applications:
 
 #. loading environment variables
@@ -17,6 +17,10 @@ the parent shell. This is a huge *hack* but it is the only way I know how to loa
 
 Sellsword is only supported for the BASH shell and on the OS X and linux operating systems. Sellsword is implemented primarily in Go because writing complex logic in BASH dramatically shortens one's life expectancy.
 
+Sellsword has two core concepts, *applications* which are defined by YAML files in ~/.ssw/config/ and
+*environments* per application stored in ~/.ssw/appname/. The environment can be a set of environment
+variables, a directory containing arbitrary files, or a single file to be linked to a particular
+location.
 
 ## Installation
 
@@ -36,12 +40,12 @@ alias ssw='source $(which ssw)'
 Sellsword knows about a few applications by default but these can be overriden
 
 .ssw/
-     app_name/
-             app_name-env.ssw  # this is just a yaml file, .ssw extension is used to avoid conflicts
+     config/
+             aws.ssw  # this is just a yaml file, .ssw extension is used to avoid conflicts
                            # with the application's own configuration files
 
 
-Example configuration for AWS
+Example environment for AWS
 
 .ssw/
      aws/
@@ -83,7 +87,7 @@ can be present multiple times. This is so that the same key can be mapped to mul
 reason for this is that different applications often use different names for the same environment
 variables.
 
-Example Configuration for Chef Server
+Example Setup for Chef Server
 
 .ssw/
      chef/
@@ -104,11 +108,14 @@ target: ~/.chef
 
 ## Usage
 
-ssw list chef   # list possible chef configurations
-ssw show chef   # show current configuration in use
-ssw use chef acme-qa 
-ssw rm chef acme-qa   # remove acme-1 configuration
-ssw list chef   # show available chef configurations
+ssw list chef   # list possible chef environments
+ssw show chef   # show current environment in use
+ssw load        # load default environments
+ssw new aws acme-prod  # wizard to create new aws environment
+ssw use aws acme-qa
+ssw unlink aws  # unlink default environment but do not delete the actual environment
+ssw rm aws acme-qa   # remove acme-qa environment
+
 
 
 
