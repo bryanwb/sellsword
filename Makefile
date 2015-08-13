@@ -1,5 +1,5 @@
 build:
-	godep go build sellsword.go
+	godep go build -o sellsword main.go appset.go app.go env.go
 
 install: build
 	cp -f sellsword ssw /usr/local/bin/

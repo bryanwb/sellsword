@@ -1,0 +1,10 @@
+type: directory
+target: ~/.chef
+
+template:
+  - name
+  - server_ip
+  - admin_pem
+  - validation_pem
+
+  

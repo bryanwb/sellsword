@@ -55,7 +55,7 @@ Example environment for AWS
         megacorp-dev-env.ssw
         megacorp-qa-env.ssw
         megacorp-prod-env.ssw
-        current-env.ssw  # symlink to current configuration
+        current  # symlink to current configuration
         
 Any file ending in '-env.ssw' will be sourced to the parent shell and should only include key/value pairs.
 Note that this actually a yaml file. Also note that we are using lower-case values here and not the typical

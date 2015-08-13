@@ -1,0 +1,7 @@
+type: environment
+
+template:
+  - name
+  - access_key
+  - secret_key
+
