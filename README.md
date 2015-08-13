@@ -7,8 +7,8 @@ for a given application for each customer. Doing this separately for each applic
 is a generic command-line tool for switching between arbitrary application environments. Sellsword
 currently supports two mechanisms for switching between applications:
 
-#. loading environment variables
-#. changing symlinks to either directories or individual files
+* loading environment variables
+* changing symlinks to either directories or individual files
 
 There are two components to sellsword, `ssw` and `sellsword`. The `sellsword` binary does all the
 work but cannot source any environment variables into the parent shell. `source /path/to/ssw [ARG ...]`
@@ -24,9 +24,9 @@ location.
 
 ## Installation
 
-#. Download the tarball
-#. `tar xvzf sellsword.tgz --strip-dir=1 -C /usr/local/bin`
-#. Add the following to your `.bashrc` file
+* Download the tarball
+* `tar xvzf sellsword.tgz --strip-dir=1 -C /usr/local/bin`
+* Add the following to your `.bashrc` file
 
 ```
 source $(which ssw)      # this loads environment variables for current configurations
