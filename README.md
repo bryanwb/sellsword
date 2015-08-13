@@ -117,7 +117,17 @@ ssw unlink aws  # unlink default environment but do not delete the actual enviro
 ssw rm aws acme-qa   # remove acme-qa environment
 
 
+# Development
 
+This project uses [godep](https://github.com/tools/godep) for managing dependencies. Godep has some
+quirks so it is worth reading a
+[tutorial](https://blog.codeship.com/godep-dependency-management-in-golang/) or two. The trickiest
+part is that you check out the sellsword to a location inside your GOPATH/src. This author locates
+the sellsword code at $GOPATH/src/github.com/bryanwb/sellsword.
+
+To install godep, `go get github.com/tools/godep`
+
+I also recommend setting the GOBIN environment variable to $GOPATH/bin
 
 # License and Author
 
