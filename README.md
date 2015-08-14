@@ -29,8 +29,9 @@ location.
 * Add the following to your `.bashrc` file
 
 ```
-source $(which ssw)      # this loads environment variables for current configurations
-alias ssw='source $(which ssw)'   
+# this loads environment variables for current configurations
+alias ssw='source $(which ssw)'
+ssw load
 ```
 
 
