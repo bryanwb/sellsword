@@ -1,7 +1,9 @@
 type: environment
 
-template:
-  - name
-  - access_key
-  - secret_key
-
+variables:
+  - access_key=AWS_ACCESS_KEY_ID
+  - access_key=AWS_ACCESS_ID
+  - secret_key=AWS_SECRET_ACCESS_KEY
+  - secret_key=AWS_SECRET_KEY
+  - region=AWS_DEFAULT_REGION
+  - region=AWS_REGION
