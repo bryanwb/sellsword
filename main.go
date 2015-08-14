@@ -189,6 +189,27 @@ func main() {
 	}
 	sswCmd.AddCommand(useCmd)
 
+	var unlinkCmd = &cobra.Command{
+		Use:   "unlink app",
+		Short: "Unlink the current environment for an application",
+		Long: `Unlink the current environment for an application,
+leaving no environment currently configured for an application`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) > 1 || len(args) < 1 {
+				red := getTermPrinter(color.FgRed)
+				fmt.Fprintf(os.Stderr, "%s\n", red("Usage: ssw unlink app_name"))
+			} else {
+				as := new(AppSet)
+				as.Home = SswHome
+				appName := args[0]
+				as.findApps(appName)
+				app := as.Apps[0]
+				app.Unlink()
+			}
+		},
+	}
+	sswCmd.AddCommand(unlinkCmd)
+
 	sswCmd.Execute()
 
 }

@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
@@ -15,7 +16,7 @@ import (
 func resolveSymlink(symlink string) (string, error) {
 	fi, err := os.Lstat(symlink)
 	if err != nil {
-		log.Errorf("Path %s does not exist\n", symlink)
+		log.Debugf("Path %s does not exist\n", symlink)
 		return "", err
 	} else {
 		if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
@@ -27,6 +28,17 @@ func resolveSymlink(symlink string) (string, error) {
 		} else {
 			return "", errors.New(fmt.Sprintf("Path %s exists but is not a symlink\n", symlink))
 		}
+	}
+}
+
+// Why the fuck isn't this in the golang stdlib?
+func expandPath(pathName string) (string, error) {
+	if string(pathName[0]) == "~" {
+		relative := strings.Split(pathName, "~")[1]
+		usr, _ := user.Current()
+		return path.Join(usr.HomeDir, relative), nil
+	} else {
+		return filepath.Abs(pathName)
 	}
 }
 
@@ -53,9 +65,12 @@ func (a *App) Parse() error {
 			return err
 		}
 		if a.EnvType == "directory" {
-			if newTarget, err := filepath.Abs(a.Target); err != nil {
+			log.Debugf("Target for %s is currently %s", a.Name, a.Target)
+			if newTarget, err := expandPath(a.Target); err != nil {
+				log.Debugf(err.Error())
 				return err
 			} else {
+				log.Debugf("New target for %s is %s", a.Name, newTarget)
 				a.Target = newTarget
 				return nil
 			}

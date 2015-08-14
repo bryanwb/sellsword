@@ -112,10 +112,10 @@ target: ~/.chef
 ssw list chef   # list possible chef environments
 ssw show chef   # show current environment in use
 ssw load        # load default environments
-ssw new aws acme-prod  # wizard to create new aws environment
+ssw new aws acme-prod  # wizard to create new aws environment TODO
 ssw use aws acme-qa
 ssw unlink aws  # unlink default environment but do not delete the actual environment
-ssw rm aws acme-qa   # remove acme-qa environment
+ssw rm aws acme-qa   # remove acme-qa environment  TODO
 
 
 # Development
