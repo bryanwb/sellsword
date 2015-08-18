@@ -1,22 +1,37 @@
-package main
+package sellsword
 
 import (
 	"fmt"
+	log "github.com/Sirupsen/logrus"
 	"github.com/fatih/color"
 	"io/ioutil"
 	"os"
 	"path"
 )
 
+var Logger *log.Logger
+
+func GetTermPrinter(colorName color.Attribute) func(...interface{}) string {
+	newColor := color.New(colorName)
+	newColor.EnableColor()
+	return newColor.SprintFunc()
+}
+
+func GetTermPrinterF(colorName color.Attribute) func(string, ...interface{}) string {
+	newColor := color.New(colorName)
+	newColor.EnableColor()
+	return newColor.SprintfFunc()
+}
+
 type AppSet struct {
 	Apps []*App
 	Home string
 }
 
-func (as *AppSet) findApps(appNames ...string) {
+func (as *AppSet) FindApps(appNames ...string) {
 	if _, err := os.Stat(as.Home); os.IsNotExist(err) {
-		red := getTermPrinterF(color.FgRed)
-		log.Errorln(red("The Home directory that you have specified, %s, does not exist.", as.Home))
+		red := GetTermPrinterF(color.FgRed)
+		Logger.Errorln(red("The Home directory that you have specified, %s, does not exist.", as.Home))
 	} else {
 		if appNames[0] == "all" {
 			di, _ := ioutil.ReadDir(as.Home)
@@ -39,16 +54,16 @@ func (as *AppSet) findApps(appNames ...string) {
 	}
 }
 
-func (as *AppSet) listApps(appNames []string) {
+func (as *AppSet) ListApps(appNames []string) {
 	if len(appNames) == 0 {
-		as.findApps("all")
+		as.FindApps("all")
 	} else {
-		as.findApps(appNames...)
+		as.FindApps(appNames...)
 	}
 	for i := range as.Apps {
-		cyan := getTermPrinter(color.FgCyan)
-		red := getTermPrinter(color.FgRed)
-		green := getTermPrinter(color.FgGreen)
+		cyan := GetTermPrinter(color.FgCyan)
+		red := GetTermPrinter(color.FgRed)
+		green := GetTermPrinter(color.FgGreen)
 		fmt.Printf("%s:\n", cyan(as.Apps[i].Name))
 		current, err := as.Apps[i].Current()
 		if err != nil {

@@ -24,30 +24,29 @@ location.
 
 ## Installation
 
-* Download the tarball
+* [Download the tarball](https://github.com/bryanwb/sellsword/releases)
 * `tar xvzf sellsword.tgz --strip-dir=1 -C /usr/local/bin`
-* Add the following to your `.bashrc` file
+* Add the following to your `.bashrc` file:
 
-```
-# this loads environment variables for current configurations
-alias ssw='source $(which ssw)'
-ssw load
-```
-
-
+        # this loads environment variables for current configurations
+        alias ssw='source $(which ssw)'
+        ssw load
 
 ## Configuration
 
-Sellsword knows about a few applications by default but these can be overriden
+Sellsword knows about a few applications by default but these can be overridden:
 
+```
 .ssw/
      config/
              aws.ssw  # this is just a yaml file, .ssw extension is used to avoid conflicts
-                           # with the application's own configuration files
+                      # with the application's own configuration files
+```
 
 
-Example environment for AWS
+### Example environment for AWS
 
+```
 .ssw/
      aws/
         acme-dev-env.ssw
@@ -57,6 +56,7 @@ Example environment for AWS
         megacorp-qa-env.ssw
         megacorp-prod-env.ssw
         current  # symlink to current configuration
+```
         
 Any file ending in '-env.ssw' will be sourced to the parent shell and should only include key/value pairs.
 Note that this actually a yaml file. Also note that we are using lower-case values here and not the typical
@@ -90,6 +90,7 @@ variables.
 
 Example Setup for Chef Server
 
+```
 .ssw/
      chef/
         acme-dev/
@@ -100,6 +101,7 @@ Example Setup for Chef Server
         acme-prod/
      config/
         chef.ssw
+```
 
 ```
 # file chef.ssw
@@ -109,14 +111,16 @@ target: ~/.chef
 
 ## Usage
 
-ssw list chef   # list possible chef environments
-ssw show chef   # show current environment in use
-ssw load        # load default environments
-ssw new aws acme-prod  # wizard to create new aws environment
+```
+ssw list chef          # list possible chef environments
+ssw show chef          # show current environment in use
+ssw load               # load default environments
+ssw new aws acme-prod  # wizard to create new aws environment TODO
 ssw use aws acme-qa
-ssw unlink aws  # unlink default environment but do not delete the actual environment
-ssw rm aws acme-qa   # remove acme-qa environment
-
+ssw unlink aws         # unlink default environment but do not delete the
+                       # actual environment
+ssw rm aws acme-qa     # remove acme-qa environment  TODO
+```
 
 # Development
 

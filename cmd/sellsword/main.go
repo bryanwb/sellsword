@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	ssw "github.com/bryanwb/sellsword"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"os"
@@ -15,14 +16,14 @@ var log = logrus.New()
 var sswVersion = "0.0.1"
 
 func runShow(args []string, sswHome string) {
-	as := new(AppSet)
+	as := new(ssw.AppSet)
 	as.Home = sswHome
-	green := getTermPrinter(color.FgGreen)
-	blue := getTermPrinter(color.FgCyan)
+	green := ssw.GetTermPrinter(color.FgGreen)
+	blue := ssw.GetTermPrinter(color.FgCyan)
 	if len(args) == 0 {
-		as.findApps("all")
+		as.FindApps("all")
 	} else {
-		as.findApps(args[0])
+		as.FindApps(args[0])
 	}
 	fmt.Println("Environments in use:")
 	for i := range as.Apps {
@@ -35,27 +36,15 @@ func runShow(args []string, sswHome string) {
 	}
 }
 
-func runLoad(args []string, as *AppSet) {
+func runLoad(args []string, as *ssw.AppSet) {
 	if len(args) == 0 {
-		as.findApps("all")
+		as.FindApps("all")
 	} else {
-		as.findApps(args...)
+		as.FindApps(args...)
 	}
 	for i := range as.Apps {
 		as.Apps[i].Load()
 	}
-}
-
-func getTermPrinter(colorName color.Attribute) func(...interface{}) string {
-	newColor := color.New(colorName)
-	newColor.EnableColor()
-	return newColor.SprintFunc()
-}
-
-func getTermPrinterF(colorName color.Attribute) func(string, ...interface{}) string {
-	newColor := color.New(colorName)
-	newColor.EnableColor()
-	return newColor.SprintfFunc()
 }
 
 func mkdirP(directories []string) {
@@ -86,6 +75,7 @@ func main() {
 	formatter.ForceColors = true
 	log.Formatter = formatter
 	log.Level = logrus.InfoLevel
+	ssw.Logger = log
 	var Verbose bool
 	usr, _ := user.Current()
 	SswHome := path.Join(usr.HomeDir, "/.ssw")
@@ -137,7 +127,7 @@ func main() {
 		Short: "Loads current Sellsword configurations",
 		Long:  `This command loads all default environment configurations for use by the shell`,
 		Run: func(cmd *cobra.Command, args []string) {
-			as := new(AppSet)
+			as := new(ssw.AppSet)
 			as.Home = SswHome
 			runLoad(args, as)
 		},
@@ -159,9 +149,9 @@ func main() {
 		Short: "list available Sellsword environments",
 		Long:  `List available Sellsword environments`,
 		Run: func(cmd *cobra.Command, args []string) {
-			as := new(AppSet)
+			as := new(ssw.AppSet)
 			as.Home = SswHome
-			as.listApps(args)
+			as.ListApps(args)
 		},
 	}
 	sswCmd.AddCommand(listCmd)
@@ -172,22 +162,43 @@ func main() {
 		Long:  `Load environment and set it as default for application`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if len(args) > 2 {
-				red := getTermPrinter(color.FgRed)
+				red := ssw.GetTermPrinter(color.FgRed)
 				fmt.Fprintf(os.Stderr, "%s\n", red("Usage: ssw use app_name environment"))
 				fmt.Fprintf(os.Stderr, "%s\n",
 					red("Execute `ssw list` to show available applications and environments"))
 			} else {
-				as := new(AppSet)
+				as := new(ssw.AppSet)
 				as.Home = SswHome
 				appName := args[0]
 				envName := args[1]
-				as.findApps(appName)
+				as.FindApps(appName)
 				app := as.Apps[0]
 				app.MakeCurrent(envName)
 			}
 		},
 	}
 	sswCmd.AddCommand(useCmd)
+
+	var unlinkCmd = &cobra.Command{
+		Use:   "unlink app",
+		Short: "Unlink the current environment for an application",
+		Long: `Unlink the current environment for an application,
+leaving no environment currently configured for an application`,
+		Run: func(cmd *cobra.Command, args []string) {
+			if len(args) > 1 || len(args) < 1 {
+				red := ssw.GetTermPrinter(color.FgRed)
+				fmt.Fprintf(os.Stderr, "%s\n", red("Usage: ssw unlink app_name"))
+			} else {
+				as := new(ssw.AppSet)
+				as.Home = SswHome
+				appName := args[0]
+				as.FindApps(appName)
+				app := as.Apps[0]
+				app.Unlink()
+			}
+		},
+	}
+	sswCmd.AddCommand(unlinkCmd)
 
 	sswCmd.Execute()
 
