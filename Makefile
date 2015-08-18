@@ -1,5 +1,5 @@
 build:
-	godep go build
+	godep go build github.com/bryanwb/sellsword/cmd/sellsword
 
 install: build
 	cp -f sellsword ssw /usr/local/bin/
