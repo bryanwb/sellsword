@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	ssw "github.com/bryanwb/sellsword"
@@ -9,11 +10,10 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"strings"
 )
 
 var log = logrus.New()
-
-var sswVersion = "0.0.1"
 
 func runShow(args []string, sswHome string) {
 	as := new(ssw.AppSet)
@@ -45,6 +45,46 @@ func runLoad(args []string, as *ssw.AppSet) {
 	for i := range as.Apps {
 		as.Apps[i].Load()
 	}
+}
+
+func runNewEnv(args []string, sswHome string, useNewEnv bool) {
+	if len(args) > 2 || len(args) < 2 {
+		red := ssw.GetTermPrinter(color.FgRed)
+		fmt.Fprintf(os.Stderr, "%s\n", red("Usage: ssw new app_name env_name"))
+	} else {
+		appName := args[0]
+		envName := args[1]
+		as := new(ssw.AppSet)
+		as.Home = sswHome
+		if err := as.FindApps(appName); err != nil {
+			log.Errorln(err.Error())
+			log.Errorf("The application you have specified %s does not appear to be configured. "+
+				"Execute `ssw list` to see which applications are configured", appName)
+			os.Exit(0)
+		}
+		a := as.Apps[0]
+		a.ParseExportVars()
+		env := new(ssw.Env)
+		env.Name = envName
+		env.EnvType = a.EnvType
+		env.Variables = make(map[string]string, len(a.VariableNames))
+		if env.EnvType == "environment" {
+			env.Path = path.Join(a.Path, env.Name+".ssw")
+			for i := range a.VariableNames {
+				reader := bufio.NewReader(os.Stdin)
+				fmt.Printf("%s: ", a.VariableNames[i])
+				text, _ := reader.ReadString('\n')
+				env.Variables[a.VariableNames[i]] = strings.TrimSpace(text)
+			}
+			if err := env.Save(); err != nil {
+				log.Errorf("error: %v", err)
+			}
+		} else {
+			red := ssw.GetTermPrinterF(color.FgRed)
+			fmt.Fprint(os.Stderr, red("new command not implemented for environment type %s", env.EnvType))
+		}
+	}
+
 }
 
 func mkdirP(directories []string) {
@@ -91,9 +131,7 @@ func main() {
 	sswCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
 
 	sswCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
-		// for some reason I have to look up the verbose flag rather than just access the Verbose var
-		v := sswCmd.Flags().Lookup("verbose").Value.String()
-		if v == "true" {
+		if Verbose == true {
 			log.Level = logrus.DebugLevel
 		}
 	}
@@ -103,7 +141,7 @@ func main() {
 		Short: "Print the version number of sellsword",
 		Long:  `All software has versions. This is Sellsword's`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Sellsword version %s\n", sswVersion)
+			fmt.Printf("Sellsword version %s\n", ssw.Version)
 		},
 	}
 	sswCmd.AddCommand(versionCmd)
@@ -199,6 +237,18 @@ leaving no environment currently configured for an application`,
 		},
 	}
 	sswCmd.AddCommand(unlinkCmd)
+
+	var useNewEnv bool
+	var newCmd = &cobra.Command{
+		Use:   "new app env_name",
+		Short: "Create a new environment for an application",
+		Long:  `Create a new environment for an application`,
+		Run: func(cmd *cobra.Command, args []string) {
+			runNewEnv(args, SswHome, useNewEnv)
+		},
+	}
+	newCmd.Flags().BoolVarP(&useNewEnv, "use", "u", false, "Use new environment")
+	sswCmd.AddCommand(newCmd)
 
 	sswCmd.Execute()
 

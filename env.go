@@ -2,6 +2,7 @@ package sellsword
 
 import (
 	"fmt"
+	"github.com/fatih/color"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"path"
@@ -18,17 +19,27 @@ type Env struct {
 }
 
 func (e *Env) Parse(a *App) error {
-	e.Name = strings.Split(path.Base(e.Path), "-env.ssw")[0]
+	e.Name = path.Base(e.Path)
 	e.App = a
 	return nil
 }
 
-func (e *Env) Generate() error {
-	return nil
-}
-
-func (e *Env) Remove() error {
-	return nil
+func (e *Env) Save() error {
+	if e.EnvType != "environment" {
+		Logger.Warnf("Environment type %s does not currently support the save operation", e.EnvType)
+		return nil
+	}
+	if d, err := yaml.Marshal(&e.Variables); err != nil {
+		return err
+	} else {
+		if err := ioutil.WriteFile(e.Path, d, 0775); err != nil {
+			return err
+		} else {
+			green := GetTermPrinterF(color.FgGreen)
+			fmt.Print(green("New environment created at %s\n", e.Path))
+			return nil
+		}
+	}
 }
 
 func (e *Env) PopulateExportVars() error {

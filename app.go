@@ -42,6 +42,23 @@ func expandPath(pathName string) (string, error) {
 	}
 }
 
+func contains(l []string, s string) bool {
+	for _, str := range l {
+		if s == str {
+			return true
+		}
+	}
+	return false
+}
+
+func appendIfMissing(slice []string, s string) []string {
+	if !contains(slice, s) {
+		return append(slice, s)
+	} else {
+		return slice
+	}
+}
+
 type App struct {
 	Name            string
 	EnvType         string `yaml:"type"`
@@ -50,6 +67,7 @@ type App struct {
 	Target          string
 	Definition      string
 	Variables       []string
+	VariableNames   []string
 	ExportVariables map[string]string
 }
 
@@ -80,9 +98,11 @@ func (a *App) Parse() error {
 }
 
 func (a *App) ParseExportVars() error {
+	a.VariableNames = make([]string, 0)
 	a.ExportVariables = make(map[string]string, len(a.Variables))
 	for i := range a.Variables {
 		keyValue := strings.Split(a.Variables[i], "=")
+		a.VariableNames = appendIfMissing(a.VariableNames, keyValue[0])
 		a.ExportVariables[keyValue[1]] = keyValue[0]
 	}
 	return nil
