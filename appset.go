@@ -2,33 +2,18 @@ package sellsword
 
 import (
 	"fmt"
-	log "github.com/Sirupsen/logrus"
 	"github.com/fatih/color"
 	"io/ioutil"
 	"os"
 	"path"
 )
 
-var Logger *log.Logger
-
-func GetTermPrinter(colorName color.Attribute) func(...interface{}) string {
-	newColor := color.New(colorName)
-	newColor.EnableColor()
-	return newColor.SprintFunc()
-}
-
-func GetTermPrinterF(colorName color.Attribute) func(string, ...interface{}) string {
-	newColor := color.New(colorName)
-	newColor.EnableColor()
-	return newColor.SprintfFunc()
-}
-
 type AppSet struct {
 	Apps []*App
 	Home string
 }
 
-func (as *AppSet) FindApps(appNames ...string) {
+func (as *AppSet) FindApps(appNames ...string) error {
 	if _, err := os.Stat(as.Home); os.IsNotExist(err) {
 		red := GetTermPrinterF(color.FgRed)
 		Logger.Errorln(red("The Home directory that you have specified, %s, does not exist.", as.Home))
@@ -47,11 +32,14 @@ func (as *AppSet) FindApps(appNames ...string) {
 			for i := range appNames {
 				a := new(App)
 				a.Path = path.Join(as.Home, appNames[i])
-				a.Parse()
+				if err := a.Parse(); err != nil {
+					return err
+				}
 				as.Apps = append(as.Apps, a)
 			}
 		}
 	}
+	return nil
 }
 
 func (as *AppSet) ListApps(appNames []string) {
