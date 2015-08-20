@@ -25,16 +25,7 @@ func NewEnv(name string, basePath string, exportVars map[string]string, vars []s
 	env := new(Env)
 	env.Name = name
 	env.EnvType = envType
-	if name == "current" {
-		if realPath, err := resolveSymlink(path.Join(basePath, "current")); err != nil {
-			return env, err
-		} else {
-			env.Path = realPath
-			env.Name = path.Base(realPath)
-		}
-	} else {
-		env.Path = path.Join(basePath, name)
-	}
+	env.Path = path.Join(basePath, name)
 	if envType == "environment" {
 		env.ExportVariables = exportVars
 		env.Variables = arrayToEmptyMap(vars)

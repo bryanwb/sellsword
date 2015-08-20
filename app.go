@@ -56,32 +56,6 @@ func NewApp(name string, sswHome string) (*App, error) {
 	return a, nil
 }
 
-func (a *App) Parse() error {
-	Logger.Debugf("Parsing application found at %s", a.Path)
-	a.Name = path.Base(a.Path)
-	a.Definition = path.Join(path.Dir(a.Path), "config", a.Name+".ssw")
-	if data, err := ioutil.ReadFile(a.Definition); err != nil {
-		Logger.Errorln(err.Error())
-		return err
-	} else {
-		if err := yaml.Unmarshal(data, a); err != nil {
-			return err
-		}
-		if a.EnvType == "directory" {
-			Logger.Debugf("Target for %s is currently %s", a.Name, a.Target)
-			if newTarget, err := expandPath(a.Target); err != nil {
-				Logger.Debugf(err.Error())
-				return err
-			} else {
-				Logger.Debugf("New target for %s is %s", a.Name, newTarget)
-				a.Target = newTarget
-				return nil
-			}
-		}
-		return nil
-	}
-}
-
 func (a *App) ParseExportVars() error {
 	a.VariableNames = make([]string, 0)
 	a.ExportVariables = make(map[string]string, len(a.Variables))
@@ -94,12 +68,19 @@ func (a *App) ParseExportVars() error {
 }
 
 func (a *App) Current() (*Env, error) {
-	if a.EnvType == "environment" {
-		a.ParseExportVars()
-		return NewEnvironmentEnv("current", a.Path, a.ExportVariables, a.VariableNames)
+	var e *Env
+	if realPath, err := resolveSymlink(path.Join(a.Path, "current")); err != nil {
+		return e, err
 	} else {
-		return NewDirectoryEnv("current", a.Path)
+		envName := path.Base(realPath)
+		if a.EnvType == "environment" {
+			a.ParseExportVars()
+			return NewEnvironmentEnv(envName, a.Path, a.ExportVariables, a.VariableNames)
+		} else {
+			return NewDirectoryEnv(envName, a.Path)
+		}
 	}
+
 }
 
 func (a *App) ListEnvs() []*Env {
