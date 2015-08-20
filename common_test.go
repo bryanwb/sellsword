@@ -80,3 +80,14 @@ func TestAppendIfMissing(t *testing.T) {
 	}
 
 }
+
+func TestArrayToMap(t *testing.T) {
+	myarr := []string{"foo", "bar", "baz"}
+	expected := map[string]string{"foo": "", "bar": "", "baz": ""}
+	actual := arrayToEmptyMap(myarr)
+	for k, v := range expected {
+		if v != actual[k] {
+			t.Errorf("Expected %s to be present. It appears that %v and %v do not match", v, actual, expected)
+		}
+	}
+}

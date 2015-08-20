@@ -5,12 +5,21 @@ import (
 	"github.com/fatih/color"
 	"io/ioutil"
 	"os"
-	"path"
+	"strings"
 )
 
 type AppSet struct {
 	Apps []*App
 	Home string
+}
+
+func NewAppSet(home string) (*AppSet, error) {
+	as := new(AppSet)
+	if _, err := os.Stat(home); os.IsNotExist(err) {
+		return as, err
+	}
+	as.Home = home
+	return as, nil
 }
 
 func (as *AppSet) FindApps(appNames ...string) error {
@@ -22,19 +31,14 @@ func (as *AppSet) FindApps(appNames ...string) error {
 			di, _ := ioutil.ReadDir(as.Home)
 			for i := range di {
 				if di[i].Name() != "config" {
-					a := new(App)
-					a.Path = path.Join(as.Home, di[i].Name())
-					a.Parse()
+					name := strings.Split(di[i].Name(), ".ssw")[0]
+					a, _ := NewApp(name, as.Home)
 					as.Apps = append(as.Apps, a)
 				}
 			}
 		} else {
 			for i := range appNames {
-				a := new(App)
-				a.Path = path.Join(as.Home, appNames[i])
-				if err := a.Parse(); err != nil {
-					return err
-				}
+				a, _ := NewApp(appNames[i], as.Home)
 				as.Apps = append(as.Apps, a)
 			}
 		}

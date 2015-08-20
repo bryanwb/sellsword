@@ -49,22 +49,22 @@ Sellsword knows about a few applications by default but these can be overridden:
 ```
 .ssw/
      aws/
-        acme-dev-env.ssw
-        acme-qa-env.ssw
-        acme-prod-env.ssw
-        megacorp-dev-env.ssw
-        megacorp-qa-env.ssw
-        megacorp-prod-env.ssw
-        current  # symlink to current configuration
+        acme-dev
+        acme-qa
+        acme-prod
+        megacorp-dev
+        megacorp-qa
+        megacorp-prod
+        current  # symlink to current environment
 ```
         
-Any file ending in '-env.ssw' will be sourced to the parent shell and should only include key/value pairs.
+The environment file which current points to will be sourced to the parent shell and should only include key/value pairs.
 Note that this actually a yaml file. Also note that we are using lower-case values here and not the typical
 uppercase used by environment variables. This is because most self-respecting developers swap caps lock
 with control, making long uppercase names inconvenient to type.
 
 ```
-# file ~/.ssw/aws/acme-dev-env.ssw
+# file ~/.ssw/aws/acme-dev
 access_key: ASDFAFASDFSDAF...
 secret_key: asdfasdfadsf...
 ```

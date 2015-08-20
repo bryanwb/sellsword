@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	ssw "github.com/bryanwb/sellsword"
@@ -10,14 +9,12 @@ import (
 	"os"
 	"os/user"
 	"path"
-	"strings"
 )
 
 var log = logrus.New()
 
 func runShow(args []string, sswHome string) {
-	as := new(ssw.AppSet)
-	as.Home = sswHome
+	as, _ := ssw.NewAppSet(sswHome)
 	green := ssw.GetTermPrinter(color.FgGreen)
 	blue := ssw.GetTermPrinter(color.FgCyan)
 	if len(args) == 0 {
@@ -36,7 +33,8 @@ func runShow(args []string, sswHome string) {
 	}
 }
 
-func runLoad(args []string, as *ssw.AppSet) {
+func runLoad(args []string, sswHome string) {
+	as, _ := ssw.NewAppSet(sswHome)
 	if len(args) == 0 {
 		as.FindApps("all")
 	} else {
@@ -54,8 +52,7 @@ func runNewEnv(args []string, sswHome string, useNewEnv bool) {
 	} else {
 		appName := args[0]
 		envName := args[1]
-		as := new(ssw.AppSet)
-		as.Home = sswHome
+		as, _ := ssw.NewAppSet(sswHome)
 		if err := as.FindApps(appName); err != nil {
 			log.Errorln(err.Error())
 			log.Errorf("The application you have specified %s does not appear to be configured. "+
@@ -63,25 +60,10 @@ func runNewEnv(args []string, sswHome string, useNewEnv bool) {
 			os.Exit(0)
 		}
 		a := as.Apps[0]
-		a.ParseExportVars()
-		env := new(ssw.Env)
-		env.Name = envName
-		env.EnvType = a.EnvType
-		env.Variables = make(map[string]string, len(a.VariableNames))
-		if env.EnvType == "environment" {
-			env.Path = path.Join(a.Path, env.Name+".ssw")
-			for i := range a.VariableNames {
-				reader := bufio.NewReader(os.Stdin)
-				fmt.Printf("%s: ", a.VariableNames[i])
-				text, _ := reader.ReadString('\n')
-				env.Variables[a.VariableNames[i]] = strings.TrimSpace(text)
-			}
-			if err := env.Save(); err != nil {
-				log.Errorf("error: %v", err)
-			}
-		} else {
-			red := ssw.GetTermPrinterF(color.FgRed)
-			fmt.Fprint(os.Stderr, red("new command not implemented for environment type %s", env.EnvType))
+		env, _ := a.NewEnv(envName)
+		if err := env.Construct(); err != nil {
+			log.Error(err.Error())
+			os.Exit(0)
 		}
 	}
 
@@ -134,6 +116,11 @@ func main() {
 		if Verbose == true {
 			log.Level = logrus.DebugLevel
 		}
+		// Make sure home directory exists
+		if _, err := os.Stat(SswHome); os.IsNotExist(err) {
+			log.Errorf("The value set for SSW Home at %s does not exist", SswHome)
+			os.Exit(0)
+		}
 	}
 
 	var versionCmd = &cobra.Command{
@@ -165,9 +152,7 @@ func main() {
 		Short: "Loads current Sellsword configurations",
 		Long:  `This command loads all default environment configurations for use by the shell`,
 		Run: func(cmd *cobra.Command, args []string) {
-			as := new(ssw.AppSet)
-			as.Home = SswHome
-			runLoad(args, as)
+			runLoad(args, SswHome)
 		},
 	}
 	sswCmd.AddCommand(loadCmd)
@@ -187,8 +172,7 @@ func main() {
 		Short: "list available Sellsword environments",
 		Long:  `List available Sellsword environments`,
 		Run: func(cmd *cobra.Command, args []string) {
-			as := new(ssw.AppSet)
-			as.Home = SswHome
+			as, _ := ssw.NewAppSet(SswHome)
 			as.ListApps(args)
 		},
 	}
@@ -205,8 +189,7 @@ func main() {
 				fmt.Fprintf(os.Stderr, "%s\n",
 					red("Execute `ssw list` to show available applications and environments"))
 			} else {
-				as := new(ssw.AppSet)
-				as.Home = SswHome
+				as, _ := ssw.NewAppSet(SswHome)
 				appName := args[0]
 				envName := args[1]
 				as.FindApps(appName)
@@ -227,8 +210,7 @@ leaving no environment currently configured for an application`,
 				red := ssw.GetTermPrinter(color.FgRed)
 				fmt.Fprintf(os.Stderr, "%s\n", red("Usage: ssw unlink app_name"))
 			} else {
-				as := new(ssw.AppSet)
-				as.Home = SswHome
+				as, _ := ssw.NewAppSet(SswHome)
 				appName := args[0]
 				as.FindApps(appName)
 				app := as.Apps[0]

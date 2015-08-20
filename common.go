@@ -73,3 +73,11 @@ func appendIfMissing(slice []string, s string) []string {
 		return slice
 	}
 }
+
+func arrayToEmptyMap(a []string) map[string]string {
+	m := make(map[string]string)
+	for i := range a {
+		m[a[i]] = ""
+	}
+	return m
+}
