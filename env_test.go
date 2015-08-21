@@ -115,6 +115,29 @@ export USERNAME=mcmuffin
 	}
 }
 
-// test save
+func TestEnvSave(t *testing.T) {
+	setUpTest()
+	wd, _ := os.Getwd()
+	dir := path.Join(wd, "test/vanilla")
+	newEnvPath := path.Join(dir, "new")
+	os.Remove(newEnvPath)
+	exportVars := map[string]string{"USERNAME": "username", "PASSWORD": "password", "REGION": "region"}
+	vars := []string{"username", "password", "region"}
+	values := []string{"macgyver", "password", "badlands"}
+	var e *Env
+	e, _ = NewEnvironmentEnv("new", dir, exportVars, vars)
+	for i := range vars {
+		e.Variables[vars[i]] = values[i]
+	}
+	e.Save()
+	e, _ = NewEnvironmentEnv("new", dir, exportVars, vars)
+	e.load()
+	for i := range vars {
+		if e.Variables[vars[i]] != values[i] {
+			t.Errorf("Expected env to have key %s with value %s, found %s", vars[i], values[i],
+				e.Variables[vars[i]])
+		}
+	}
+}
 
-// test construct
+// test Construct, not sure how to do this

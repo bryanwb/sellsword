@@ -29,7 +29,14 @@ func NewEnv(name string, basePath string, exportVars map[string]string, vars []s
 	env.Path = path.Join(basePath, name)
 	if envType == "environment" {
 		env.ExportVariables = exportVars
-		env.Variables = arrayToEmptyMap(vars)
+		// load the Variables from file if they exist
+		if _, err := os.Stat(env.Path); err == nil {
+			if env.Variables, err = env.load(); err != nil {
+				return env, err
+			}
+		} else {
+			env.Variables = arrayToEmptyMap(vars)
+		}
 	}
 	return env, nil
 }
@@ -42,6 +49,16 @@ func NewEnvironmentEnv(name string, basePath string, exportVars map[string]strin
 // NewDirectoryEnv is a factory method that properly initializes the Env struct for the env type of Directory
 func NewDirectoryEnv(name string, basePath string) (*Env, error) {
 	return NewEnv(name, basePath, map[string]string{}, []string{}, "directory")
+}
+
+func (e *Env) load() (map[string]string, error) {
+	varMap := make(map[string]string)
+	if d, err := ioutil.ReadFile(e.Path); err != nil {
+		return varMap, err
+	} else {
+		err := yaml.Unmarshal(d, varMap)
+		return varMap, err
+	}
 }
 
 func (e *Env) Save() error {
@@ -63,27 +80,19 @@ func (e *Env) Save() error {
 }
 
 func (e *Env) PopulateExportVars() error {
-	yamlVars := make(map[string]string)
-	Logger.Debugf("e.Path is %s", e.Path)
-	if d, err := ioutil.ReadFile(e.Path); err != nil {
+	if yamlVars, err := e.load(); err != nil {
 		return err
 	} else {
-		if err == nil {
-			if err := yaml.Unmarshal(d, yamlVars); err != nil {
-				return err
+		for key, value := range e.ExportVariables {
+			if v, ok := yamlVars[value]; ok {
+				e.ExportVariables[key] = v
 			} else {
-				for key, value := range e.ExportVariables {
-					if v, ok := yamlVars[value]; ok {
-						e.ExportVariables[key] = v
-					} else {
-						delete(e.ExportVariables, key)
-					}
-				}
+				delete(e.ExportVariables, key)
 			}
 		}
+		Logger.Debugf("env export vars are %v", e.ExportVariables)
+		return nil
 	}
-	Logger.Debugf("env export vars are %v", e.ExportVariables)
-	return nil
 }
 
 // This is a separate function from PrintExports to make it easier to test
