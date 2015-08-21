@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sort"
 	"strings"
 )
 
@@ -43,11 +44,6 @@ func NewDirectoryEnv(name string, basePath string) (*Env, error) {
 	return NewEnv(name, basePath, map[string]string{}, []string{}, "directory")
 }
 
-// func (e *Env) Parse(a *App) error {
-// 	e.Name = path.Base(e.Path)
-// 	return nil
-// }
-
 func (e *Env) Save() error {
 	if e.EnvType != "environment" {
 		Logger.Warnf("Environment type %s does not currently support the save operation", e.EnvType)
@@ -69,27 +65,40 @@ func (e *Env) Save() error {
 func (e *Env) PopulateExportVars() error {
 	yamlVars := make(map[string]string)
 	Logger.Debugf("e.Path is %s", e.Path)
-	d, err := ioutil.ReadFile(e.Path)
-	if err == nil {
-		yaml.Unmarshal(d, yamlVars)
-		for key, value := range e.ExportVariables {
-			if v, ok := yamlVars[value]; ok {
-				e.ExportVariables[key] = v
+	if d, err := ioutil.ReadFile(e.Path); err != nil {
+		return err
+	} else {
+		if err == nil {
+			if err := yaml.Unmarshal(d, yamlVars); err != nil {
+				return err
 			} else {
-				delete(e.ExportVariables, key)
+				for key, value := range e.ExportVariables {
+					if v, ok := yamlVars[value]; ok {
+						e.ExportVariables[key] = v
+					} else {
+						delete(e.ExportVariables, key)
+					}
+				}
 			}
 		}
 	}
 	Logger.Debugf("env export vars are %v", e.ExportVariables)
-	return err
+	return nil
+}
+
+// This is a separate function from PrintExports to make it easier to test
+func (e *Env) MakeExportStatements() string {
+	statements := make([]string, 0)
+	for key, value := range e.ExportVariables {
+		statements = append(statements, "export "+key+"="+value)
+	}
+	// We sort it so that the output is easier to test
+	sort.Strings(statements)
+	return strings.Join(statements, "\n")
 }
 
 func (e *Env) PrintExports() {
-	exports := make([]string, len(e.ExportVariables))
-	for key, value := range e.ExportVariables {
-		exports = append(exports, "export "+key+"="+value)
-	}
-	fmt.Println(strings.Join(exports, "\n"))
+	fmt.Println(e.MakeExportStatements())
 }
 
 // *Constructs* a new environment, not to be confused w/ the Constructor NewEnv

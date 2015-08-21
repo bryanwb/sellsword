@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func setUp() string {
+func setUpTest() string {
 	dir, _ := os.Getwd()
 	tmpdir := path.Join(dir, "test/tmp")
 	os.MkdirAll(tmpdir, 0755)
@@ -18,7 +18,7 @@ func setUp() string {
 }
 
 func TestResolveSymlinkForRealLink(t *testing.T) {
-	tmpdir := setUp()
+	tmpdir := setUpTest()
 	source := path.Join(tmpdir, "source")
 	target := path.Join(tmpdir, "target")
 	ioutil.WriteFile(source, []byte{}, 0755)
@@ -37,7 +37,7 @@ func TestResolveSymlinkForFakeLinkFails(t *testing.T) {
 }
 
 func TestExpandPath(t *testing.T) {
-	setUp()
+	setUpTest()
 	var actual string
 	var expected string
 	actual, _ = expandPath("~/.chef/foo")
