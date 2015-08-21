@@ -39,7 +39,7 @@ func TestNewEnvironmentEnv(t *testing.T) {
 func TestPopulateExportVars(t *testing.T) {
 	setUpTest()
 	wd, _ := os.Getwd()
-	dir := path.Join(wd, "test/vanilla")
+	dir := path.Join(wd, "test/aws")
 	exportVars := map[string]string{"USERNAME": "username", "PASSWORD": "password", "REGION": "region"}
 	exportKeys := []string{"USERNAME", "PASSWORD", "REGION"}
 	vars := []string{"username", "password", "region"}
@@ -57,7 +57,7 @@ func TestPopulateExportVars(t *testing.T) {
 func TestPopulateExportVarsRemovesMissingKey(t *testing.T) {
 	setUpTest()
 	wd, _ := os.Getwd()
-	dir := path.Join(wd, "test/vanilla")
+	dir := path.Join(wd, "test/aws")
 	exportVars := map[string]string{"USERNAME": "username", "PASSWORD": "password", "REGION": "region",
 		"PROFILE": "profile"}
 	vars := []string{"username", "password", "region"}
@@ -83,7 +83,7 @@ func TestPopulateExportVarsNonexistentFile(t *testing.T) {
 func TestInvalidYaml(t *testing.T) {
 	setUpTest()
 	wd, _ := os.Getwd()
-	dir := path.Join(wd, "test/vanilla")
+	dir := path.Join(wd, "test/aws")
 	exportVars := map[string]string{"USERNAME": "username", "PASSWORD": "password", "REGION": "region"}
 	vars := []string{"username", "password", "region"}
 	e, _ := NewEnvironmentEnv("dyncorp", dir, exportVars, vars)
@@ -97,7 +97,7 @@ func TestInvalidYaml(t *testing.T) {
 func TestEnvPrintExports(t *testing.T) {
 	setUpTest()
 	wd, _ := os.Getwd()
-	dir := path.Join(wd, "test/vanilla")
+	dir := path.Join(wd, "test/aws")
 	exportVars := map[string]string{"USERNAME": "username", "PASSWORD": "password", "REGION": "region",
 		"PROFILE": "profile"}
 	vars := []string{"username", "password", "region"}
@@ -118,7 +118,7 @@ export USERNAME=mcmuffin
 func TestEnvSave(t *testing.T) {
 	setUpTest()
 	wd, _ := os.Getwd()
-	dir := path.Join(wd, "test/vanilla")
+	dir := path.Join(wd, "test/aws")
 	newEnvPath := path.Join(dir, "new")
 	os.Remove(newEnvPath)
 	exportVars := map[string]string{"USERNAME": "username", "PASSWORD": "password", "REGION": "region"}
@@ -138,6 +138,7 @@ func TestEnvSave(t *testing.T) {
 				e.Variables[vars[i]])
 		}
 	}
+	os.Remove(newEnvPath)
 }
 
 // test Construct, not sure how to do this

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"sort"
 	"strings"
 )
 
@@ -158,11 +159,18 @@ func (a *App) EnumerateExportVars() []string {
 	return vars
 }
 
-func (a *App) UnsetExportVars() {
+func (a *App) MakeUnsetExportVars() string {
 	vars := a.EnumerateExportVars()
+	statements := make([]string, 0)
 	for i := range vars {
-		fmt.Printf("unset %s\n", vars[i])
+		statements = append(statements, fmt.Sprintf("unset %s", vars[i]))
 	}
+	sort.Strings(statements)
+	return strings.Join(statements, "\n")
+}
+
+func (a *App) UnsetExportVars() {
+	fmt.Printf(a.MakeUnsetExportVars())
 }
 
 func (a *App) Unlink() error {

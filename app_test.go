@@ -3,6 +3,7 @@ package sellsword
 import (
 	"os"
 	"path"
+	"strings"
 	"testing"
 )
 
@@ -58,11 +59,108 @@ func TestNewAppParsingExportVars(t *testing.T) {
 }
 
 // test that Current returns correct link
+func TestAppCheckCurrent(t *testing.T) {
+	setUpTest()
+	wd, _ := os.Getwd()
+	source := path.Join(wd, "test/aws/acme")
+	currentLink := path.Join(wd, "test/aws/current")
+	relink(source, currentLink)
+	a, _ := NewApp("aws", path.Join(wd, "test"))
+	e, _ := a.Current()
+	if e.Path != source {
+		t.Errorf("Expected current env to point to %s, found %s", source, e.Path)
+	}
+}
 
-// test that Unlink removes current link
+// test that Current returns correct link for a Directory environment
+func TestAppDirectoryCheckCurrent(t *testing.T) {
+	setUpTest()
+	wd, _ := os.Getwd()
+	source := path.Join(wd, "test/chef/acme")
+	currentLink := path.Join(wd, "test/chef/current")
+	target := path.Join(wd, "fixtures/.chef")
+	relink(source, currentLink)
+	relink(source, target)
+	a, _ := NewApp("chef", path.Join(wd, "test"))
+	e, _ := a.Current()
+	if e.Path != source {
+		t.Errorf("Expected current env to point to %s, found %s", source, e.Path)
+	}
+	actual, _ := os.Readlink(a.Target)
+	if actual != source {
+		t.Errorf("Expected current env to point to %s, found %s", source, actual)
+	}
+}
+
+// test that Unlink removes current link and target directory
+func TestAppUnlink(t *testing.T) {
+	setUpTest()
+	wd, _ := os.Getwd()
+	source := path.Join(wd, "test/chef/acme")
+	currentLink := path.Join(wd, "test/chef/current")
+	target := path.Join(wd, "fixtures/.chef")
+	relink(source, currentLink)
+	relink(source, target)
+	a, _ := NewApp("chef", path.Join(wd, "test"))
+	a.Unlink()
+	_, err1 := os.Lstat(currentLink)
+	_, err2 := os.Lstat(target)
+	if err1 == nil || err2 == nil {
+		t.Errorf("Expected %s and %s to be deleted but either 1 or both were not deleted", currentLink, target)
+	}
+}
+
+func TestAppUnsetVars(t *testing.T) {
+	setUpTest()
+	wd, _ := os.Getwd()
+	a, _ := NewApp("aws", path.Join(wd, "test"))
+	unsets := strings.TrimSpace(a.MakeUnsetExportVars())
+	expected := strings.TrimSpace(`unset AWS_ACCESS_ID
+unset AWS_ACCESS_KEY_ID
+unset AWS_DEFAULT_REGION
+unset AWS_REGION
+unset AWS_SECRET_ACCESS_KEY
+unset AWS_SECRET_KEY
+`)
+	if unsets != expected {
+		t.Errorf("Expected %s and found %s", expected, unsets)
+	}
+}
 
 // ListEnvs returns correct list
+func TestListEnvs(t *testing.T) {
+	setUpTest()
+	wd, _ := os.Getwd()
+	a, _ := NewApp("aws", path.Join(wd, "test"))
+	envs := a.ListEnvs()
+	envNames := make([]string, 0)
+	expected := []string{"acme", "dyncorp"}
+	for i := range envs {
+		envNames = append(envNames, envs[i].Name)
+	}
+	for i := range envNames {
+		if envNames[i] != expected[i] {
+			t.Errorf("List of envs did not match expected %v, found %v", expected, envNames)
+		}
+	}
+}
 
-// Test MakeCurrent unsets export vars
+// Test MakeCurrent changes current symlink and target symlink
+func TestAppMakeCurrent(t *testing.T) {
+	setUpTest()
+	wd, _ := os.Getwd()
+	a, _ := NewApp("aws", path.Join(wd, "test"))
+	dyncorpPath := path.Join(wd, "test/aws/dyncorp")
+	a.MakeCurrent("dyncorp")
+	source, _ := os.Readlink(path.Join(wd, "test/aws/current"))
+	if source != dyncorpPath {
+		t.Errorf("Expected make current to set source to %s, found %s", source, dyncorpPath)
+	}
+}
 
-// Test MakeCurrent changes current symlink
+// Delete the current symlink, which points who knows where, and link it
+// to source
+func relink(source string, link string) {
+	os.Remove(link)
+	os.Symlink(source, link)
+}
