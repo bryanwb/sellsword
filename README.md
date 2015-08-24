@@ -25,7 +25,7 @@ location.
 ## Installation
 
 * [Download the tarball](https://github.com/bryanwb/sellsword/releases)
-* `tar xvzf sellsword.tgz --strip-dir=1 -C /usr/local/bin`
+* `tar xvzf sellsword*.gz -C /usr/local/bin`
 * Add the following to your `.bashrc` file:
 
         # this loads environment variables for current configurations
