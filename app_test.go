@@ -1,6 +1,7 @@
 package sellsword
 
 import (
+	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -157,6 +158,48 @@ func TestAppMakeCurrent(t *testing.T) {
 		t.Errorf("Expected make current to set source to %s, found %s", source, dyncorpPath)
 	}
 }
+
+// test error cases for MakeCurrent
+
+func TestAppLoadAction(t *testing.T) {
+	setUpTest()
+	wd, _ := os.Getwd()
+	output := path.Join(wd, "test/tmp/current")
+	os.Remove(output)
+	a, _ := NewApp("ssh", path.Join(wd, "test"))
+	expected := path.Join(wd, "test/ssh/personal")
+	current := path.Join(wd, "test/ssh/current")
+	os.Symlink(expected, current)
+	e, _ := a.Current()
+	a.Load()
+	d, _ := ioutil.ReadFile(output)
+	actual := strings.TrimSpace(string(d))
+	if expected != e.Path {
+		t.Errorf("Unload action for App failed or did not run, expected value %s, found %s",
+			expected, actual)
+	}
+}
+
+func TestAppUnloadAction(t *testing.T) {
+	setUpTest()
+	wd, _ := os.Getwd()
+	output := path.Join(wd, "test/tmp/current")
+	os.Remove(output)
+	a, _ := NewApp("ssh", path.Join(wd, "test"))
+	expected := path.Join(wd, "test/ssh/personal")
+	current := path.Join(wd, "test/ssh/current")
+	os.Symlink(expected, current)
+	os.Remove(output)
+	a.Unload()
+	d, _ := ioutil.ReadFile(output)
+	actual := strings.TrimSpace(string(d))
+	if expected != actual {
+		t.Errorf("Unload action for App failed or did not run, expected value %s, found %s",
+			expected, actual)
+	}
+}
+
+// test load action
 
 // Delete the current symlink, which points who knows where, and link it
 // to source

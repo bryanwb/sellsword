@@ -131,7 +131,7 @@ func TestEnvSave(t *testing.T) {
 	}
 	e.Save()
 	e, _ = NewEnvironmentEnv("new", dir, exportVars, vars)
-	e.load()
+	e.loadYaml()
 	for i := range vars {
 		if e.Variables[vars[i]] != values[i] {
 			t.Errorf("Expected env to have key %s with value %s, found %s", vars[i], values[i],

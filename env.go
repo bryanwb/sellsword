@@ -31,7 +31,7 @@ func NewEnv(name string, basePath string, exportVars map[string]string, vars []s
 		env.ExportVariables = exportVars
 		// load the Variables from file if they exist
 		if _, err := os.Stat(env.Path); err == nil {
-			if env.Variables, err = env.load(); err != nil {
+			if env.Variables, err = env.loadYaml(); err != nil {
 				return env, err
 			}
 		} else {
@@ -51,7 +51,14 @@ func NewDirectoryEnv(name string, basePath string) (*Env, error) {
 	return NewEnv(name, basePath, map[string]string{}, []string{}, "directory")
 }
 
-func (e *Env) load() (map[string]string, error) {
+func (e *Env) Load() {
+	if e.EnvType == "environment" {
+		e.PopulateExportVars()
+		e.PrintExports()
+	}
+}
+
+func (e *Env) loadYaml() (map[string]string, error) {
 	varMap := make(map[string]string)
 	if d, err := ioutil.ReadFile(e.Path); err != nil {
 		return varMap, err
@@ -80,7 +87,7 @@ func (e *Env) Save() error {
 }
 
 func (e *Env) PopulateExportVars() error {
-	if yamlVars, err := e.load(); err != nil {
+	if yamlVars, err := e.loadYaml(); err != nil {
 		return err
 	} else {
 		for key, value := range e.ExportVariables {

@@ -22,6 +22,8 @@ Sellsword has two core concepts, *applications* which are defined by YAML files 
 variables, a directory containing arbitrary files, or a single file to be linked to a particular
 location.
 
+There are two types of environments, directory and *environment*. I realize the naming of this second type is very confusing so suggestions are most welcome.
+
 ## Installation
 
 * [Download the tarball](https://github.com/bryanwb/sellsword/releases)
@@ -107,6 +109,27 @@ Example Setup for Chef Server
 # file chef.ssw
 type: directory
 target: ~/.chef
+```
+
+Sellsword supports running arbitrary shell command when an environment is loaded and unloaded. In practice this
+is only relevant to directory environments, at least in my experience.
+
+For example, you could use sellsword to manage which ssh keys are loaded into your local SSH Agent
+
+```
+# file ssh.ssw
+type: directory
+target: ~/ssh
+load_action: ssh-add $SSW_CURRENT/*.pem $SSW_CURRENT/*.priv
+unload_action: ssh-add -D
+```
+
+Here is what the contents of ~/.ssw/ssh/acme directory look like
+
+```
+acme-prod.pem
+acme-dev.priv
+acme-dev.pub
 ```
 
 ## Usage

@@ -14,6 +14,12 @@ func setUpTest() string {
 	tmpdir := path.Join(dir, "test/tmp")
 	os.MkdirAll(tmpdir, 0755)
 	Logger = logrus.New()
+	verbose := testing.Verbose()
+	if verbose {
+		Logger.Level = logrus.DebugLevel
+	} else {
+		Logger.Level = logrus.PanicLevel
+	}
 	return tmpdir
 }
 

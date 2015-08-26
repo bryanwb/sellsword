@@ -1,11 +1,13 @@
 package sellsword
 
 import (
+	"errors"
 	"fmt"
 	"github.com/fatih/color"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"sort"
 	"strings"
@@ -21,6 +23,8 @@ type App struct {
 	Variables       []string
 	VariableNames   []string
 	ExportVariables map[string]string
+	LoadAction      string `yaml:"load"`
+	UnloadAction    string `yaml:"unload"`
 }
 
 // NewApp is the constructor for New Apps
@@ -37,6 +41,7 @@ func NewApp(name string, sswHome string) (*App, error) {
 		if err := yaml.Unmarshal(data, a); err != nil {
 			return a, err
 		}
+
 		if a.EnvType == "directory" {
 			Logger.Debugf("Target for %s is currently %s", a.Name, a.Target)
 			if newTarget, err := expandPath(a.Target); err != nil {
@@ -75,7 +80,6 @@ func (a *App) Current() (*Env, error) {
 	} else {
 		envName := path.Base(realPath)
 		if a.EnvType == "environment" {
-			a.ParseExportVars()
 			return NewEnvironmentEnv(envName, a.Path, a.ExportVariables, a.VariableNames)
 		} else {
 			return NewDirectoryEnv(envName, a.Path)
@@ -85,7 +89,6 @@ func (a *App) Current() (*Env, error) {
 }
 
 func (a *App) ListEnvs() []*Env {
-	a.ParseExportVars()
 	envs := make([]*Env, 0)
 	di, _ := ioutil.ReadDir(a.Path)
 	for i := range di {
@@ -103,18 +106,65 @@ func (a *App) ListEnvs() []*Env {
 	return envs
 }
 
-func (a *App) Load() {
-	if a.EnvType == "environment" {
-		Logger.Debugf("Exporting environment variables for application %s\n", a.Name)
-		a.ParseExportVars()
-		if env, err := a.Current(); err == nil {
-			env.PopulateExportVars()
-			env.PrintExports()
-		} else {
-			Logger.Error(err.Error())
-		}
+func (a *App) runAction(actionName string) error {
+	var action string
+	if current, err := a.Current(); err != nil {
+		return err
 	} else {
-		Logger.Debugf("Application %s has no environment variables to export, nothing to do\n", a.Name)
+		currentPath := current.Path
+		if actionName == "load" {
+			action = a.LoadAction
+		} else if actionName == "unload" {
+			action = a.UnloadAction
+		} else {
+			return errors.New("Only actions load and unload are valid.")
+		}
+		shell := os.Getenv("SHELL")
+		cmd := exec.Command(shell, "-c", action)
+		envVar := fmt.Sprintf("SSW_CURRENT=%s", currentPath)
+		cmd.Env = []string{envVar}
+		return cmd.Run()
+	}
+}
+
+func (a *App) Load() error {
+	if err := a.runAction("load"); err != nil {
+		return err
+	} else {
+		if a.EnvType == "environment" {
+			Logger.Debugf("Exporting environment variables for application %s\n", a.Name)
+			if env, err := a.Current(); err == nil {
+				env.Load()
+				return nil
+			} else {
+				Logger.Error(err.Error())
+				return err
+			}
+		} else {
+			Logger.Debugf("Application %s has no environment variables to export, nothing to do\n", a.Name)
+			return nil
+		}
+	}
+}
+
+func (a *App) Unload() error {
+	if err := a.runAction("unload"); err != nil {
+		return err
+	} else {
+		if a.EnvType == "environment" {
+			Logger.Debugf("Exporting environment variables for application %s\n", a.Name)
+			a.UnsetExportVars()
+			if env, err := a.Current(); err == nil {
+				env.Load()
+				return nil
+			} else {
+				Logger.Error(err.Error())
+				return err
+			}
+		} else {
+			Logger.Debugf("Application %s has no environment variables to export, nothing to do\n", a.Name)
+			return nil
+		}
 	}
 }
 
@@ -133,19 +183,27 @@ func (a *App) MakeCurrent(envName string) error {
 	} else {
 		var newEnv *Env
 		if a.EnvType == "environment" {
-			a.ParseExportVars()
 			newEnv, err = NewEnvironmentEnv(envName, a.Path, a.ExportVariables, a.VariableNames)
 			newEnv.PopulateExportVars()
-			a.UnsetExportVars()
+			a.Unload()
 			newEnv.PrintExports()
 		} else {
-			newEnv, err = NewDirectoryEnv("current", a.Path)
+			newEnv, err = NewDirectoryEnv(envName, a.Path)
 		}
-		if err := a.Unlink(); err != nil {
-			Logger.Debugf("Encountered error when unlinking current for %s", a.Name)
+		if err := a.Unload(); err != nil {
 			return err
+		} else {
+			if err := a.Unlink(); err != nil {
+				Logger.Debugf("Encountered error when unlinking current for %s", a.Name)
+				return err
+			} else {
+				if err := a.Link(newEnv.Name); err != nil {
+					return err
+				} else {
+					return a.Load()
+				}
+			}
 		}
-		return a.Link(newEnv.Name)
 	}
 }
 

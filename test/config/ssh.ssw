@@ -1,0 +1,5 @@
+type: directory
+target: ./fixtures/ssh
+load: echo $SSW_CURRENT > ./test/tmp/current
+unload: echo $SSW_CURRENT > ./test/tmp/current
+

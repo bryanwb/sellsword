@@ -14,7 +14,7 @@ import (
 
 var Logger *log.Logger
 
-var Version = "0.0.2"
+var Version = "0.0.3"
 
 func GetTermPrinter(colorName color.Attribute) func(...interface{}) string {
 	newColor := color.New(colorName)
