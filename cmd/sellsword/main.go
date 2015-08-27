@@ -183,7 +183,7 @@ func main() {
 		Short: "Load environment and set it as default for application",
 		Long:  `Load environment and set it as default for application`,
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) > 2 {
+			if len(args) > 2 || len(args) < 2 {
 				red := ssw.GetTermPrinter(color.FgRed)
 				fmt.Fprintf(os.Stderr, "%s\n", red("Usage: ssw use app_name environment"))
 				fmt.Fprintf(os.Stderr, "%s\n",

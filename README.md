@@ -120,8 +120,8 @@ For example, you could use sellsword to manage which ssh keys are loaded into yo
 # file ssh.ssw
 type: directory
 target: ~/ssh
-load_action: ssh-add $SSW_CURRENT/*.pem $SSW_CURRENT/*.priv
-unload_action: ssh-add -D
+load: ssh-add $SSW_CURRENT/*.pem $SSW_CURRENT/*.priv
+unload: ssh-add -D
 ```
 
 Here is what the contents of ~/.ssw/ssh/acme directory look like

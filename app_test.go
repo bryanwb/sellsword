@@ -1,6 +1,7 @@
 package sellsword
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -196,6 +197,33 @@ func TestAppUnloadAction(t *testing.T) {
 	if expected != actual {
 		t.Errorf("Unload action for App failed or did not run, expected value %s, found %s",
 			expected, actual)
+	}
+}
+
+func TestRunAction(t *testing.T) {
+	setUpTest()
+	wd, _ := os.Getwd()
+	output := path.Join(wd, "test/tmp/load-test")
+	os.Remove(output)
+	a, _ := NewApp("ssh", path.Join(wd, "test"))
+	expected := "foo"
+	a.LoadAction = fmt.Sprintf("echo foo > %s", output)
+	a.runAction("load")
+	d, _ := ioutil.ReadFile(output)
+	actual := strings.TrimSpace(string(d))
+	if expected != actual {
+		t.Errorf("Run action for App failed or did not run, expected value %s, found %s",
+			expected, actual)
+	}
+}
+
+func TestRunActionFails(t *testing.T) {
+	setUpTest()
+	wd, _ := os.Getwd()
+	a, _ := NewApp("ssh", path.Join(wd, "test"))
+	a.LoadAction = "exit 1"
+	if err := a.runAction("load"); err == nil {
+		t.Errorf("Expected Run action for App to raise error, it did not")
 	}
 }
 

@@ -115,6 +115,7 @@ func (a *App) runAction(actionName string) error {
 		if actionName == "load" {
 			action = a.LoadAction
 		} else if actionName == "unload" {
+			Logger.Debugf("Unload action is %s\n", a.UnloadAction)
 			action = a.UnloadAction
 		} else {
 			return errors.New("Only actions load and unload are valid.")
@@ -122,7 +123,7 @@ func (a *App) runAction(actionName string) error {
 		shell := os.Getenv("SHELL")
 		cmd := exec.Command(shell, "-c", action)
 		envVar := fmt.Sprintf("SSW_CURRENT=%s", currentPath)
-		cmd.Env = []string{envVar}
+		cmd.Env = append(os.Environ(), envVar)
 		return cmd.Run()
 	}
 }
@@ -190,9 +191,12 @@ func (a *App) MakeCurrent(envName string) error {
 		} else {
 			newEnv, err = NewDirectoryEnv(envName, a.Path)
 		}
+		Logger.Debugf("Unloading %s", a.Name)
 		if err := a.Unload(); err != nil {
+			Logger.Debugf("Unloading hit error %s\n", err.Error())
 			return err
 		} else {
+			Logger.Debugf("Unlinking %s", currentEnv)
 			if err := a.Unlink(); err != nil {
 				Logger.Debugf("Encountered error when unlinking current for %s", a.Name)
 				return err
